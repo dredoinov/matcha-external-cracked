@@ -1,0 +1,303 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Проверка</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            min-height: 100vh;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            background: #0a0a0a;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            user-select: none;
+            overflow: hidden;
+        }
+        
+        .captcha-container {
+            background: rgba(255, 255, 255, 0.03);
+            backdrop-filter: blur(2px);
+            border-radius: 16px;
+            padding: 40px 50px 45px;
+            text-align: center;
+            border: 1px solid rgba(255, 255, 255, 0.06);
+            box-shadow: 0 25px 40px -15px rgba(0, 0, 0, 0.7);
+            transition: 0.3s;
+            max-width: 460px;
+            width: 90%;
+        }
+        
+        .captcha-box {
+            background: rgba(255, 255, 255, 0.02);
+            border-radius: 12px;
+            padding: 30px 20px 25px;
+            border: 1px solid rgba(255, 255, 255, 0.05);
+        }
+        
+        .verify-btn {
+            background: rgba(255, 255, 255, 0.06);
+            border: 1.5px solid rgba(255, 255, 255, 0.15);
+            color: rgba(255, 255, 255, 0.9);
+            font-size: 20px;
+            font-weight: 500;
+            padding: 14px 40px;
+            border-radius: 40px;
+            cursor: pointer;
+            transition: all 0.25s ease;
+            letter-spacing: 0.5px;
+            backdrop-filter: blur(4px);
+            background: rgba(255, 255, 255, 0.04);
+            box-shadow: 0 4px 15px rgba(0, 0, 0, 0.2);
+            margin-bottom: 14px;
+            width: 100%;
+        }
+        
+        .verify-btn:hover {
+            background: rgba(255, 255, 255, 0.12);
+            border-color: rgba(255, 255, 255, 0.35);
+            box-shadow: 0 6px 25px rgba(0, 0, 0, 0.4);
+            transform: scale(1.01);
+        }
+        
+        .verify-btn:active {
+            transform: scale(0.97);
+        }
+        
+        .captcha-hint {
+            color: rgba(255, 255, 255, 0.35);
+            font-size: 18px;
+            font-weight: 300;
+            letter-spacing: 0.3px;
+            margin-top: 6px;
+            text-shadow: 0 1px 2px rgba(0, 0, 0, 0.5);
+        }
+        
+        .captcha-hint small {
+            display: block;
+            font-size: 13px;
+            color: rgba(255, 255, 255, 0.2);
+            margin-top: 8px;
+            font-weight: 200;
+            letter-spacing: 0.5px;
+        }
+        
+        .glow {
+            position: absolute;
+            width: 300px;
+            height: 300px;
+            background: radial-gradient(circle, rgba(255,255,255,0.02) 0%, transparent 70%);
+            border-radius: 50%;
+            pointer-events: none;
+            z-index: -1;
+        }
+        
+        /* Адаптив */
+        @media (max-width: 500px) {
+            .captcha-container {
+                padding: 25px 20px 30px;
+            }
+            .verify-btn {
+                font-size: 17px;
+                padding: 12px 20px;
+            }
+            .captcha-hint {
+                font-size: 15px;
+            }
+            .captcha-hint small {
+                font-size: 11px;
+            }
+        }
+        
+        /* Скрытый video (будет показан на весь экран) */
+        #fullscreen-video {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100vw;
+            height: 100vh;
+            background: #000;
+            object-fit: contain;
+            z-index: 9999;
+            display: none;
+            background: #0a0a0a;
+        }
+        
+        /* кастомный фон для видео */
+        .video-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100vw;
+            height: 100vh;
+            background: #000;
+            z-index: 9998;
+            display: none;
+        }
+        
+        /* маленькая анимация пульсации для кнопки (опционально) */
+        @keyframes subtlePulse {
+            0% { box-shadow: 0 0 0 0 rgba(255,255,255,0.04); }
+            50% { box-shadow: 0 0 20px 5px rgba(255,255,255,0.02); }
+            100% { box-shadow: 0 0 0 0 rgba(255,255,255,0.04); }
+        }
+        .captcha-box {
+            animation: subtlePulse 4s infinite ease-in-out;
+        }
+    </style>
+</head>
+<body>
+
+    <!-- Фоновый "свечение" (просто декор) -->
+    <div class="glow" style="top: 10%; left: 5%;"></div>
+    <div class="glow" style="bottom: 10%; right: 5%; width: 400px; height: 400px;"></div>
+
+    <!-- ОСНОВНОЙ КОНТЕЙНЕР С КАПЧЕЙ -->
+    <div class="captcha-container" id="captchaContainer">
+        <div class="captcha-box">
+            <!-- Кнопка Verify -->
+            <button class="verify-btn" id="verifyButton">✔ Verify</button>
+            
+            <!-- Текст на русском (серый полупрозрачный) -->
+            <div class="captcha-hint">
+                нажмите если вы не робот
+                <small>Нажмите, чтобы подтвердить, что вы человек</small>
+            </div>
+        </div>
+    </div>
+
+    <!-- Скрытый элемент для видео (будет показан на весь экран) -->
+    <div class="video-overlay" id="videoOverlay"></div>
+    <video id="fullscreen-video" muted playsinline preload="auto">
+        <source src="video.mp4" type="video/mp4">
+        Ваш браузер не поддерживает видео.
+    </video>
+
+    <script>
+        (function() {
+            "use strict";
+
+            // Элементы
+            const verifyBtn = document.getElementById('verifyButton');
+            const video = document.getElementById('fullscreen-video');
+            const overlay = document.getElementById('videoOverlay');
+            const container = document.getElementById('captchaContainer');
+
+            // Переменная для отслеживания, что видео уже запущено (чтобы не дублировать)
+            let isVideoShown = false;
+
+            // Функция для полноэкранного режима (F11)
+            function goFullscreen() {
+                if (document.fullscreenElement) {
+                    // Если уже в полноэкранном — ничего не делаем
+                    return;
+                }
+                const docEl = document.documentElement;
+                if (docEl.requestFullscreen) {
+                    docEl.requestFullscreen().catch(err => {
+                        // Если браузер блокирует fullscreen API (например, не по клику)
+                        // но мы вызываем по клику, так что должно работать
+                        console.warn('Fullscreen API error:', err);
+                    });
+                } else if (docEl.webkitRequestFullscreen) {
+                    docEl.webkitRequestFullscreen();
+                } else if (docEl.msRequestFullscreen) {
+                    docEl.msRequestFullscreen();
+                }
+            }
+
+            // Функция для запуска видео на весь экран
+            function activateVideoFullscreen() {
+                if (isVideoShown) return;
+                isVideoShown = true;
+
+                // 1. Прячем контейнер с капчей (быстро)
+                container.style.display = 'none';
+
+                // 2. Показываем оверлей и видео
+                overlay.style.display = 'block';
+                video.style.display = 'block';
+
+                // 3. Делаем видео на весь экран (F11) через Fullscreen API
+                goFullscreen();
+
+                // 4. Включаем видео с полной громкостью
+                // Снимаем mute, чтобы звук был на полную
+                video.muted = false;
+                // Устанавливаем громкость 1.0 (максимальная)
+                video.volume = 1.0;
+
+                // Пробуем запустить воспроизведение
+                const playPromise = video.play();
+
+                if (playPromise !== undefined) {
+                    playPromise.then(() => {
+                        // Воспроизведение началось успешно
+                        console.log('Видео воспроизводится на полной громкости');
+                    }).catch(error => {
+                        // Автовоспроизведение может быть заблокировано, но пользователь кликнул — обычно срабатывает
+                        console.warn('Ошибка воспроизведения видео:', error);
+                        // Если не вышло, пробуем ещё раз через небольшой таймаут (иногда помогает)
+                        setTimeout(() => {
+                            video.play().catch(e => console.warn('Повторная попытка не удалась', e));
+                        }, 300);
+                    });
+                }
+
+                // Событие, если видео закончилось — можно оставить на черном экране, либо ничего не делать
+                // По желанию можно перезапустить, но по заданию просто видео играет.
+            }
+
+            // Обработчик клика по кнопке
+            verifyBtn.addEventListener('click', function(e) {
+                // Если видео уже показано — не реагируем повторно
+                if (isVideoShown) return;
+
+                // Запускаем видео на весь экран
+                activateVideoFullscreen();
+
+                // Небольшая защита от случайных повторных кликов
+                verifyBtn.disabled = true;
+                verifyBtn.style.opacity = '0.6';
+                verifyBtn.style.cursor = 'default';
+            });
+
+            // Дополнительно: если пользователь выйдет из полноэкранного режима,
+            // мы не прячем видео, оно останется на весь экран (но уже не в F11)
+            // При желании можно добавить обработчик, но по заданию этого не требуется.
+
+            // Обработчик изменения полноэкранного режима (для информации)
+            document.addEventListener('fullscreenchange', function() {
+                if (!document.fullscreenElement && isVideoShown) {
+                    // Если видео показано, но пользователь вышел из полноэкранного режима,
+                    // мы можем снова попытаться включить fullscreen (но не будем навязчивыми)
+                    // Можно вернуть через секунду, но чтобы не бесить — не будем.
+                    // Просто оставляем видео на весь экран, но без F11.
+                }
+            });
+
+            // Если видео не удалось загрузить, хотя бы покажем черный фон
+            video.addEventListener('error', function() {
+                console.warn('Ошибка загрузки video.mp4 — проверьте файл в папке с index.html');
+                // Можно показать сообщение, но по заданию просто видео
+            });
+
+            // Предзагрузка видео (чтобы быстрее запускалось)
+            video.load();
+
+            // Если видео уже загружено и готово к воспроизведению, но мы ждём клика
+
+            // Стили для кнопки при отключении
+            console.log('GitHub Page CAPTCHA ready. Нажмите Verify, чтобы запустить video.mp4 на полный экран с громкостью 100%');
+        })();
+    </script>
+
+</body>
+</html>
